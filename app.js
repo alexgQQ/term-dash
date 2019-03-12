@@ -1,3 +1,4 @@
+var jokes = require('./jokes.js')
 var si = require('systeminformation');
 var blessed = require('blessed')
 , contrib = require('blessed-contrib')
@@ -5,7 +6,7 @@ var blessed = require('blessed')
 
 var grid = new contrib.grid({rows: 2, cols: 2, screen: screen})
 
-var donut = grid.set(1, 1, 1, 1, contrib.donut,
+var MemDonut = grid.set(1, 1, 1, 1, contrib.donut,
     {
     label: 'Memory Usage',
     radius: 10,
@@ -16,42 +17,71 @@ var donut = grid.set(1, 1, 1, 1, contrib.donut,
   ]
 });
 
-var pic = grid.set(0, 1, 1, 1, contrib.picture,
-    { file: 'rpi.png'
-    , cols: 20
+var CpuDonut = grid.set(0, 1, 1, 1, contrib.donut,
+    {
+    label: 'CPU Usage',
+    radius: 10,
+    arcWidth: 4,
+    yPadding: 2,
+  data: [
+    {percent: 0, label: '', color: 'cyan'}
+  ]
+});
+
+var pic = grid.set(1, 0, 1, 1, contrib.picture,
+    { file: 'ubuntu.png'
+    , cols: 22
     , onReady: ready})
 function ready() {screen.render()}
 
-log = grid.set(0, 0, 1, 1, contrib.log,
+var log = grid.set(0, 0, 1, 1, contrib.log,
     { fg: "green"
     , selectedFg: "green"
-    , label: 'Server Log'})
+    , label: 'Server Log'}
+)
 
 screen.render();
 
-setInterval(updateDonut, 50)
-setInterval(updateLog, 500)
+setInterval(UpdateMemDonut, 50)
+setInterval(UpdateCpuDonut, 50)
+setInterval(UpdateLog, 2000)
 
-var foo = 0.00;
+var mem = 0.00;
+var cpu = 0.00;
 
-function updateDonut(){
+function UpdateMemDonut(){
     si.mem()
         .then(function(data) {
             total = data['total']
             used = data['used']
-            foo = used/total
+            mem = used/total
         }, function(error) {
             console.error(error)
         });
 
-    donut.update([
-        {percent: parseFloat((foo) % 1).toFixed(2), label: '', 'color': 'green'},
+    MemDonut.update([
+        {percent: parseFloat((mem) % 1).toFixed(2), label: '', 'color': 'green'},
     ])
     screen.render();
 }
 
-function updateLog(){
-    log.log('Foo bar!!')
+function UpdateCpuDonut(){
+    si.currentLoad()
+        .then(function(data) {
+            cpu = data['currentload']
+        }, function(error) {
+            console.error(error)
+        });
+
+    CpuDonut.update([
+        {percent: parseFloat(cpu).toFixed(2), label: '', 'color': 'cyan'},
+    ])
+    screen.render();
+}
+
+function UpdateLog(){
+    log.log(jokes.get_joke());
+    screen.render();
 }
 
 screen.key(['escape', 'q', 'C-c'], function(ch, key) {
